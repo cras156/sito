@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cras_Station | Ceramica e Materia</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
@@ -18,7 +21,7 @@
 
   /* Scatole cinesi: reveal-wrap (clip-path) → parallax-wrap (scrub Y) → media-asset (scale/hover).
      Livelli separati = nessun conflitto di transform tra le tre animazioni GSAP indipendenti. */
-  .reveal-wrap{ position:relative; overflow:hidden; clip-path:inset(100% 0% 0% 0%); cursor:pointer; }
+  .reveal-wrap{ position:relative; overflow:hidden; clip-path:inset(100% 0% 0% 0%); cursor:pointer; background:#292522; }
   .parallax-wrap{ width:100%; height:120%; position:relative; top:-10%; will-change:transform; }
   .media-asset{ width:100%; height:100%; object-fit:cover; display:block; will-change:transform; }
 
@@ -27,18 +30,22 @@
   .ghost-cyan{ filter:url(#f-cyan); } .ghost-magenta{ filter:url(#f-magenta); }
   video.media-asset{ transition:filter .6s cubic-bezier(.19,1,.22,1); }
   .reveal-wrap:hover video.media-asset{ filter:saturate(1.5) contrast(1.05); }
-
   .expand-hint{ transition:opacity .3s ease; } .reveal-wrap:hover .expand-hint{ opacity:1; }
 
   /* Illustrazioni line-art: il tratto si "disegna" via stroke-dashoffset (animato in JS).
-     Il filtro f-rough applica un jitter a bassa frequenza (feTurbulence+feDisplacementMap):
-     stesso set di forme, resa "fotocopiata e storta" da fanzine invece che vettoriale pulita. */
+     f-rough (feTurbulence+feDisplacementMap) le rende storte e "fotocopiate", non vettoriali pulite. */
   .sketch{ transform-origin:center; overflow:visible; filter:url(#f-rough); }
   .sketch path, .sketch circle, .sketch ellipse, .sketch line{ fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   @keyframes spin-slow{ to{ transform:rotate(360deg); } }
   .spin-slow{ animation:spin-slow 7s linear infinite; }
 
   #preloader{ position:fixed; inset:0; background:var(--ink); color:var(--bg); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+  .preloader-vid{ filter:grayscale(1) contrast(1.3) brightness(.75); }
+  .curtain{ position:absolute; top:0; bottom:0; width:50%; background:var(--ink); z-index:5; }
+  .curtain-l{ left:0; } .curtain-r{ right:0; }
+  .progress-track{ width:120px; height:1px; background:rgba(242,240,234,.25); position:relative; overflow:hidden; }
+  .progress-fill{ position:absolute; inset:0; width:0%; background:var(--bg); }
+  .blink{ animation:blink 1s step-end infinite; } @keyframes blink{ 50%{ opacity:0; } }
 
   /* Grana da fanzine fotocopiata, texture DIY a costo zero. */
   body::after{ content:''; position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.035; mix-blend-mode:overlay;
@@ -46,14 +53,15 @@
 
   #lb-frame img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
 
-  /* Glitch CMYK sui link di contatto: puro CSS, content:attr() clona il testo
-     due volte senza duplicare markup, sfasato di 3px in direzioni opposte. */
   .glitch-link{ position:relative; display:inline-block; }
   .glitch-link::before, .glitch-link::after{ content:attr(data-text); position:absolute; inset:0; opacity:0; transition:transform .18s ease, opacity .18s ease; }
   .glitch-link::before{ color:var(--cyan); mix-blend-mode:screen; }
   .glitch-link::after{ color:var(--magenta); mix-blend-mode:screen; }
   .glitch-link:hover::before{ opacity:.85; transform:translate(-3px,2px); }
   .glitch-link:hover::after{ opacity:.85; transform:translate(3px,-2px); }
+
+  .highlight{ background-image:linear-gradient(var(--magenta), var(--magenta)); background-repeat:no-repeat; background-size:0% 38%; background-position:0 88%; }
+  .stamp{ display:inline-block; border:2px solid var(--ink); padding:.4rem .9rem; transform:rotate(-6deg); }
 
   @media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
 </style>
@@ -72,14 +80,19 @@
 </svg>
 
 <div id="preloader">
-  <video class="absolute inset-0 w-full h-full object-cover opacity-40 preloader-vid" autoplay loop muted playsinline>
+  <video class="absolute inset-0 w-full h-full object-cover opacity-70 preloader-vid" autoplay loop muted playsinline>
     <source src="img/introvideo.mp4" type="video/mp4">
   </video>
+  <div class="curtain curtain-l"></div>
+  <div class="curtain curtain-r"></div>
   <div class="z-10 text-center mix-blend-difference">
     <h1 id="preloader-title" class="serif persp text-5xl md:text-8xl uppercase tracking-widest overflow-hidden">Cras_Station</h1>
-    <div class="flex items-center justify-center gap-4 mt-6">
-      <span id="preloader-progress" class="mono text-xs tabular-nums">00</span>
-      <p class="mono text-xs tracking-[0.5em] uppercase opacity-80">Loading system</p>
+    <div class="flex flex-col items-center gap-3 mt-8">
+      <div class="flex items-center gap-4">
+        <span id="preloader-progress" class="mono text-xs tabular-nums">00</span>
+        <p class="mono text-xs tracking-[0.5em] uppercase opacity-80">Loading system<span class="blink">_</span></p>
+      </div>
+      <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
     </div>
   </div>
 </div>
@@ -94,7 +107,7 @@
 </nav>
 
 <main id="main-content">
-  <header class="h-screen w-full flex flex-col justify-end items-center relative p-6 pb-20 overflow-hidden">
+  <header id="hero-pin" class="h-screen w-full flex flex-col justify-end items-center relative p-6 pb-20 overflow-hidden">
     <div class="z-10 text-center w-full mix-blend-difference text-white">
       <h2 id="hero-title" class="serif persp text-[5rem] md:text-[12vw] leading-none tracking-tighter w-full">CERAMI_CRAS</h2>
     </div>
@@ -104,21 +117,34 @@
     </div>
   </header>
 
-  <section id="laboratorio" class="py-32 px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 items-center bg-[#f2f0ea]">
+  <section id="laboratorio" class="relative z-20 py-32 px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 items-center bg-[#f2f0ea] rounded-t-[3rem] shadow-[0_-40px_60px_-20px_rgba(0,0,0,0.35)]">
     <div class="reveal-wrap h-[70vh] w-full rounded-sm" style="cursor:default">
       <div class="parallax-wrap" data-speed="0.15">
         <video class="media-asset" autoplay loop muted playsinline><source src="img/video intro2.mp4" type="video/mp4"></video>
       </div>
     </div>
-    <div class="space-y-8 pr-0 md:pr-24">
+    <div class="manifesto-col space-y-8 pr-0 md:pr-24">
       <svg class="sketch w-14 h-20 text-[#111111]" viewBox="0 0 160 240" aria-hidden="true">
         <path d="M80,10 C55,10 45,35 50,60 C40,75 25,95 25,140 C25,195 45,225 80,230 C115,225 135,195 135,140 C135,95 120,75 110,60 C115,35 105,10 80,10 Z"/>
         <path d="M50,70 C25,80 20,110 45,125"/>
         <path d="M110,70 C135,80 140,110 115,125"/>
       </svg>
       <p class="mono text-xs tracking-[0.3em] uppercase text-stone-500 font-bold border-b border-stone-300 pb-2 inline-block">Manifesto DIY</p>
-      <h3 class="serif text-4xl md:text-6xl leading-tight process-text">La ceramica è il ritratto del mio io. Imperfetta, cruda, reale, punk.</h3>
-      <p class="text-lg text-stone-600 leading-relaxed fade-text">Non nasco da uno stampo: nasco dalle mani, dagli errori tenuti, dalle crepe che scelgo di non nascondere. Lavoro l'argilla come si scrive una fanzine — di getto, senza bozzetto, lasciando che il gesto sbagliato diventi la texture finale. Ogni smalto è un esperimento chimico fuori controllo; ogni pezzo che sopravvive alla cottura porta addosso il segno di quella scommessa.</p>
+
+      <div class="relative inline-block">
+        <h3 class="serif text-4xl md:text-6xl leading-tight process-text">La ceramica è il ritratto del mio io. Imperfetta, cruda, reale, punk.</h3>
+        <svg class="underline-draw absolute -bottom-2 left-0 w-full h-4" viewBox="0 0 400 20" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2,12 C60,4 140,18 200,10 C260,3 330,16 398,9" fill="none" stroke="var(--magenta)" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <p class="text-lg text-stone-600 leading-relaxed fade-text">Non nasco da uno stampo: nasco dalle mani, dagli errori tenuti, dalle crepe che scelgo di non nascondere. Lavoro l'argilla come si scrive una fanzine — di getto, senza bozzetto, lasciando che il gesto sbagliato diventi la <mark class="highlight">texture finale</mark>. Ogni smalto è un esperimento chimico fuori controllo; ogni pezzo che sopravvive alla cottura porta addosso il segno di quella scommessa. Non firmo con un logo: firmo con l'imperfezione.</p>
+
+      <div class="flex items-center gap-4 pt-2">
+        <span class="stamp mono text-xs uppercase tracking-widest">Fatto a mano</span>
+        <span class="stamp mono text-xs uppercase tracking-widest" style="transform:rotate(4deg)">Pezzo unico</span>
+      </div>
+
       <ul class="mono text-xs uppercase tracking-widest text-stone-500 space-y-2 pt-2">
         <li class="spec-item">→ Argilla refrattaria bianca, lavorazione a mano</li>
         <li class="spec-item">→ Cottura 1220°C, doppio ciclo in forno a gas</li>
@@ -140,7 +166,6 @@
         <p class="mono text-xs uppercase tracking-[0.4em] text-gray-500">Vol. 1</p>
       </div>
     </div>
-    <!-- Griglia popolata da JS a partire dall'array GALLERY: nessuna ripetizione di markup. -->
     <div id="archivio-grid" class="grid grid-cols-1 md:grid-cols-12 gap-y-24 md:gap-y-40 gap-x-6"></div>
   </section>
 
@@ -148,14 +173,11 @@
     <div class="mb-24 flex justify-between items-end border-b border-stone-300 pb-8">
       <h2 class="serif persp text-5xl md:text-8xl section-title">Workshop</h2>
       <svg class="sketch spin-slow w-12 h-12 text-stone-500" viewBox="0 0 120 120" aria-hidden="true">
-        <circle cx="60" cy="60" r="46"/>
-        <circle cx="60" cy="60" r="6"/>
-        <path d="M60,14 L60,106"/>
-        <path d="M14,60 L106,60"/>
+        <circle cx="60" cy="60" r="46"/><circle cx="60" cy="60" r="6"/>
+        <path d="M60,14 L60,106"/><path d="M14,60 L106,60"/>
       </svg>
     </div>
     <p class="mono text-sm text-stone-500 max-w-xl mb-16 fade-text">Tre percorsi, un solo laboratorio: si entra a mani vuote, si esce con qualcosa di storto e vero. Posti limitati, si lavora fianco a fianco.</p>
-    <!-- Griglia popolata da JS a partire dall'array WORKSHOP: stesso motore della galleria (reveal + CMYK hover). -->
     <div id="workshop-grid" class="grid grid-cols-1 md:grid-cols-3 gap-10"></div>
   </section>
 
@@ -169,7 +191,6 @@
       </svg>
     </div>
     <p class="mono text-sm text-gray-400 max-w-lg mb-14 fade-text">Commissioni su misura, collaborazioni, domande sui workshop: scrivi o scorri il feed, rispondo sempre io.</p>
-
     <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mono text-sm uppercase tracking-widest">
       <a href="https://instagram.com/cerami_cras" target="_blank" rel="noopener" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#ff00c8] transition-colors" data-text="@cerami_cras">
         <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Instagram — Archivio</span>@cerami_cras
@@ -206,42 +227,88 @@
   </div>
 </div>
 
+<!-- Solo GSAP core + ScrollTrigger: entrambi ufficiali su cdnjs. SplitText (plugin a pagamento)
+     è stato rimosso — una versione "gratuita" caricata da terzi non è affidabile e, se quel file
+     non risponde, blocca l'intero script (compresa la rivelazione delle immagini e la lightbox).
+     Il suo comportamento è ora replicato da splitChars/splitWords/splitLines qui sotto: stesso
+     risultato, zero dipendenze esterne fragili. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-<script src="https://assets.incode.it/gsap-business/minified/SplitText.min.js"></script>
 
 <script>
-gsap.registerPlugin(ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger);
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const HOVER  = matchMedia('(hover: hover)').matches;
 const D = REDUCE ? 0.01 : 1;
 
 /* =====================================================================
-   0. DATI MEDIA — unica fonte di verità per entrambe le griglie e la
-   lightbox. ALL_MEDIA unisce Archivio + Workshop con un id progressivo:
-   la lightbox naviga sull'intero set, indipendentemente da dove si apre.
+   0. UTILITY DI SPLIT-TEXT — sostituto leggero e gratuito di SplitText.
+   splitChars/splitWords wrappano ogni unità in uno <span> per l'animazione
+   per-carattere/parola; splitLines riusa splitWords e raggruppa gli span
+   per offsetTop (righe visive reali, si adatta anche al responsive).
+   ===================================================================== */
+function splitChars(el){
+  const txt = el.textContent; el.textContent = '';
+  const frag = document.createDocumentFragment();
+  return [...txt].map(ch => {
+    const s = document.createElement('span');
+    s.style.display = 'inline-block';
+    s.textContent = ch === ' ' ? '\u00A0' : ch;
+    frag.appendChild(s); return s;
+  }).map((s,i,arr) => (i === arr.length-1 && el.appendChild(frag), s));
+}
+function splitWords(el){
+  const txt = el.textContent.trim(); el.textContent = '';
+  const frag = document.createDocumentFragment(), words = [];
+  txt.split(/\s+/).forEach((w,i) => {
+    if (i > 0) frag.appendChild(document.createTextNode(' '));
+    const s = document.createElement('span');
+    s.style.display = 'inline-block'; s.textContent = w;
+    frag.appendChild(s); words.push(s);
+  });
+  el.appendChild(frag); return words;
+}
+function splitLines(el){
+  const words = splitWords(el);
+  const lines = new Map();
+  words.forEach(w => { const top = w.offsetTop; if (!lines.has(top)) lines.set(top, []); lines.get(top).push(w); });
+  return [...lines.values()];
+}
+
+/* =====================================================================
+   1. DATI MEDIA — unica fonte di verità per entrambe le griglie e la
+   lightbox. ALL_MEDIA unisce Archivio + Workshop con un id progressivo.
+   Un handler onerror comune sostituisce ogni immagine non trovata con un
+   placeholder leggibile: niente più riquadri vuoti e invisibili da capire.
    ===================================================================== */
 const GALLERY = [
-  { src:'img/vaso1.jpeg',      alt:'cuore spezzato',    n:'01', title:'Cuore Spezzato',    tag:'Argilla bianca',   speed:.18, span:'md:col-span-6 h-[75vh]' },
-  { src:'img/vaso2.jpeg',      alt:'dea',                n:'02', title:'Dea',               tag:'',                 speed:-.12,span:'md:col-span-4 md:col-start-9 h-[60vh] md:mt-48' },
-  { src:'img/posacenere.jpeg', alt:'posacenere kabuki',  n:'03', title:'Posacenere Kabuki', tag:'Smalti minerali',  speed:.22, span:'md:col-span-8 md:col-start-3 h-[85vh]' },
-  { src:'img/piccione.jpeg',   alt:'sculturina',         n:'04', title:'Sculturina',        tag:'',                 speed:-.16,span:'md:col-span-3 md:col-start-2 h-[50vh] md:-mt-32 relative z-20', extra:'shadow-2xl' },
-  { src:'img/cuore.jpg',       alt:'vaso cuore',         n:'05', title:'Vaso Cuore',        tag:'',                 speed:.14, span:'md:col-span-5 md:col-start-7 h-[70vh]' },
-  { src: "img/set.jpg",     alt:'set da the',   n:'06', title:'set  decorato e tartaruga ninja',  tag:'Ingobbio ',    speed:-.10,span:'md:col-span-5 md:col-start-2 h-[65vh] md:mt-12' },
-  { src:'img/over.jpg',      alt:'totem rituale',      n:'07', title:'Totem Rituale',     tag:'',                 speed:.20, span:'md:col-span-6 md:col-start-7 h-[80vh] md:-mt-20' },
+  { src:'img/vaso1.jpeg',      alt:'cuore spezzato',    n:'01', title:'Cuore Spezzato',            tag:'Argilla bianca',  speed:.18, span:'md:col-span-6 h-[75vh]' },
+  { src:'img/vaso2.jpeg',      alt:'dea',                n:'02', title:'Dea',                       tag:'',                speed:-.12,span:'md:col-span-4 md:col-start-9 h-[60vh] md:mt-48' },
+  { src:'img/posacenere.jpeg', alt:'posacenere kabuki',  n:'03', title:'Posacenere Kabuki',         tag:'Smalti minerali', speed:.22, span:'md:col-span-8 md:col-start-3 h-[85vh]' },
+  { src:'img/piccione.jpeg',   alt:'sculturina',         n:'04', title:'Sculturina',                tag:'',                speed:-.16,span:'md:col-span-3 md:col-start-2 h-[50vh] md:-mt-32 relative z-20', extra:'shadow-2xl' },
+  { src:'img/cuore.jpg',       alt:'vaso cuore',         n:'05', title:'Vaso Cuore',                tag:'',                speed:.14, span:'md:col-span-5 md:col-start-7 h-[70vh]' },
+  { src:'img/set.jpg',         alt:'set da tè',          n:'06', title:'Set Decorato e Tartaruga Ninja', tag:'Ingobbio',   speed:-.10,span:'md:col-span-5 md:col-start-2 h-[65vh] md:mt-12' },
+  { src:'img/over.jpg',        alt:'totem rituale',      n:'07', title:'Totem Rituale',             tag:'',                speed:.20, span:'md:col-span-6 md:col-start-7 h-[80vh] md:-mt-20' },
 ];
 const WORKSHOP = [
-  { src:'img/base.jpg',         alt:'workshop base',         n:'01', title:'Workshop Base',         tag:'Impasto, colombino, foggiatura' },
-  { src:'img/decorazione.jpg',  alt:'workshop decorazione',  n:'02', title:'Workshop Decorazione',  tag:'Ingobbi, smalti, texture' },
-  { src:'img/tornio.jpeg',       alt:'workshop tornio',       n:'03', title:'Workshop Tornio',       tag:'Centratura e foggiatura al tornio' },
+  { src:'img/base.jpg',        alt:'workshop base',        n:'01', title:'Workshop Base',        tag:'Impasto, colombino, foggiatura' },
+  { src:'img/decorazione.jpg', alt:'workshop decorazione',  n:'02', title:'Workshop Decorazione', tag:'Ingobbi, smalti, texture' },
+  { src:'img/tornio.jpeg',     alt:'workshop tornio',       n:'03', title:'Workshop Tornio',      tag:'Centratura e foggiatura al tornio' },
 ];
 const ALL_MEDIA = [...GALLERY, ...WORKSHOP];
 ALL_MEDIA.forEach((m, i) => m.id = i);
 
+// Placeholder SVG inline (nessuna richiesta di rete) per immagini non trovate — mostra il path atteso,
+// utile per individuare subito refusi di maiuscole/minuscole o estensione sbagliata (GitHub Pages è case-sensitive).
+const brokenPlaceholder = src => `data:image/svg+xml,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#292522"/>
+  <text x="50%" y="46%" fill="#f2f0ea" font-family="monospace" font-size="13" text-anchor="middle">Immagine non trovata</text>
+  <text x="50%" y="58%" fill="#888" font-family="monospace" font-size="11" text-anchor="middle">${src}</text></svg>`)}`;
+
 document.getElementById('archivio-grid').innerHTML = GALLERY.map(g => `
   <div class="${g.span}">
     <div class="reveal-wrap gallery-item h-full w-full bg-stone-900 ${g.extra||''}">
-      <div class="parallax-wrap" data-speed="${g.speed}"><img class="media-asset" src="${g.src}" alt="${g.alt}"></div>
+      <div class="parallax-wrap" data-speed="${g.speed}"><img class="media-asset" src="${g.src}" alt="${g.alt}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=brokenPlaceholder('${g.src}')"></div>
       <span class="expand-hint mono text-[10px] uppercase tracking-widest absolute bottom-3 right-3 px-2 py-1 bg-[#f2f0ea] text-[#111111] opacity-0 pointer-events-none z-10">Espandi ↗</span>
     </div>
     <div class="flex justify-between mt-4 mono text-xs uppercase tracking-widest text-gray-400">
@@ -252,7 +319,7 @@ document.getElementById('archivio-grid').innerHTML = GALLERY.map(g => `
 document.getElementById('workshop-grid').innerHTML = WORKSHOP.map(w => `
   <div>
     <div class="reveal-wrap gallery-item h-[55vh] w-full bg-stone-300">
-      <div class="parallax-wrap" data-speed=".16"><img class="media-asset" src="${w.src}" alt="${w.alt}"></div>
+      <div class="parallax-wrap" data-speed=".16"><img class="media-asset" src="${w.src}" alt="${w.alt}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=brokenPlaceholder('${w.src}')"></div>
       <span class="expand-hint mono text-[10px] uppercase tracking-widest absolute bottom-3 right-3 px-2 py-1 bg-[#111111] text-[#f2f0ea] opacity-0 pointer-events-none z-10">Espandi ↗</span>
     </div>
     <div class="mt-4">
@@ -262,27 +329,36 @@ document.getElementById('workshop-grid').innerHTML = WORKSHOP.map(w => `
   </div>`).join('');
 
 /* =====================================================================
-   1. PRELOADER + HERO — timeline teatrale unica (nessuna callback separata)
+   2. PRELOADER + HERO — tende che si aprono sul video in duotone, titolo
+   e barra di progresso in parallelo, poi il video torna a colore proprio
+   mentre il preloader scivola via svelando l'hero sottostante.
    ===================================================================== */
-const preChars  = new SplitText('#preloader-title', { type:'chars' });
-const heroChars = new SplitText('#hero-title', { type:'chars' });
+const preChars  = splitChars(document.getElementById('preloader-title'));
+const heroChars = splitChars(document.getElementById('hero-title'));
 const progress  = { v:0 };
 const progressEl = document.getElementById('preloader-progress');
+const fillEl     = document.getElementById('progress-fill');
 
-gsap.set([preChars.chars, heroChars.chars], { yPercent:100, opacity:0, rotationX:-70, transformOrigin:'50% 100% -40px' });
+gsap.set([preChars, heroChars], { yPercent:100, opacity:0, rotationX:-70, transformOrigin:'50% 100% -40px' });
 gsap.set('.hero-media', { scale:1.25 });
+gsap.set('.curtain-l, .curtain-r', { xPercent:0 });
+gsap.to('.preloader-vid', { scale:1.12, duration:6, ease:'none', repeat:-1, yoyo:true });
 
 gsap.timeline({ onComplete: () => { document.body.classList.remove('fixed-body'); ScrollTrigger.refresh(); } })
-  .from(preChars.chars, { yPercent:0, opacity:1, rotationX:0, duration:1.4*D, stagger:.035, ease:'expo.out', delay:.2 }, 0)
-  .to(progress, { v:100, duration:1.6*D, ease:'power2.inOut', onUpdate:() => progressEl.textContent = String(Math.round(progress.v)).padStart(2,'0') }, 0)
-  .to('.preloader-vid', { scale:1.08, duration:1.4*D, ease:'power3.inOut' }, '+=0.2')
-  .to('#preloader', { yPercent:-100, duration:1.4*D, ease:'power4.inOut' }, '-=0.5')
+  .to('.curtain-l', { xPercent:-100, duration:1.1*D, ease:'power4.inOut' }, 0.1)
+  .to('.curtain-r', { xPercent:100, duration:1.1*D, ease:'power4.inOut' }, 0.1)
+  .from(preChars, { yPercent:0, opacity:1, rotationX:0, duration:1.4*D, stagger:.035, ease:'expo.out' }, 0.5)
+  .to(progress, { v:100, duration:1.8*D, ease:'power2.inOut',
+      onUpdate: () => { progressEl.textContent = String(Math.round(progress.v)).padStart(2,'0'); fillEl.style.width = progress.v + '%'; }
+    }, 0.5)
+  .to('.preloader-vid', { filter:'grayscale(0) contrast(1.05) brightness(1)', duration:1.2*D, ease:'power2.out' }, '+=0.1')
+  .to('#preloader', { yPercent:-100, duration:1.3*D, ease:'power4.inOut' }, '-=0.6')
   .to('.hero-media', { scale:1, duration:2.2*D, ease:'expo.out' }, '-=1')
-  .to(heroChars.chars, { yPercent:0, opacity:1, rotationX:0, duration:1.4*D, stagger:.025, ease:'expo.out' }, '-=1.8')
+  .to(heroChars, { yPercent:0, opacity:1, rotationX:0, duration:1.4*D, stagger:.025, ease:'expo.out' }, '-=1.8')
   .to('.nav-anim', { opacity:1, duration:.8*D, ease:'power2.out' }, '-=1.2');
 
 /* =====================================================================
-   2. PARALLASSE — ciclo unico per hero + entrambe le griglie via data-speed
+   3. PARALLASSE — ciclo unico per hero + entrambe le griglie via data-speed
    ===================================================================== */
 gsap.utils.toArray('.parallax-wrap[data-speed]').forEach(el => {
   gsap.to(el, {
@@ -292,20 +368,35 @@ gsap.utils.toArray('.parallax-wrap[data-speed]').forEach(el => {
 });
 
 /* =====================================================================
-   3. TIPOGRAFIA CINETICA
-   - .process-text  → reveal per linee (manifesto)
-   - .fade-text     → reveal per parole, stagger asincrono ("random")
-   - .spec-item     → lista specifiche tecniche, ingresso a scatti da sinistra
-   - .section-title → titoli di sezione (Archivio/Workshop/Contatti): ognuno
-     si anima sul PROPRIO trigger, non su uno fisso, per restare riusabile
-     su un numero arbitrario di sezioni senza toccare il JS.
+   3.5 TRASCINAMENTO HERO — il video di apertura resta fermo (pin) mentre
+   il Laboratorio, con angolo superiore arrotondato, sale sopra di lui come
+   un foglio trascinato a mano. In parallelo il video viene tirato verso il
+   basso e ingrandito (scrub), rinforzando la sensazione fisica di trascinamento.
    ===================================================================== */
-gsap.set(new SplitText('.process-text', { type:'lines' }).lines, { y:40, opacity:0 });
+if (!REDUCE) {
+  ScrollTrigger.create({ trigger:'#hero-pin', start:'top top', end:'bottom top', pin:true, pinSpacing:false, anticipatePin:1 });
+  gsap.to('.hero-media', {
+    yPercent:18, scale:1.15, ease:'none',
+    scrollTrigger:{ trigger:'#hero-pin', start:'top top', end:'bottom top', scrub:.6 }
+  });
+}
+
+/* =====================================================================
+   4. TIPOGRAFIA CINETICA
+   - .process-text  → reveal per linee reali (splitLines)
+   - .fade-text     → reveal per parole, stagger asincrono ("random")
+   - .spec-item     → lista specifiche tecniche, ingresso a scatti
+   - .section-title → ogni titolo si anima sul PROPRIO trigger
+   - .manifesto-col → scrub continuo (non un ingresso una tantum)
+   - .highlight / .underline-draw / .stamp → dettagli DIY della descrizione
+   ===================================================================== */
+const lineGroups = splitLines(document.querySelector('.process-text'));
+gsap.set(lineGroups.flat(), { y:40, opacity:0 });
 ScrollTrigger.create({ trigger:'.process-text', start:'top 85%', once:true,
-  onEnter: () => gsap.to('.process-text .line', { y:0, opacity:1, duration:1.4*D, stagger:.1, ease:'expo.out' }) });
+  onEnter: () => lineGroups.forEach((line,i) => gsap.to(line, { y:0, opacity:1, duration:1.4*D, delay:i*.1, ease:'expo.out' })) });
 
 gsap.utils.toArray('.fade-text').forEach(el => {
-  const words = new SplitText(el, { type:'words' }).words;
+  const words = splitWords(el);
   gsap.set(words, { opacity:0, y:14 });
   ScrollTrigger.create({ trigger: el, start:'top 85%', once:true,
     onEnter: () => gsap.to(words, { opacity:1, y:0, duration:.9*D, stagger:{ each:.025, from:'random' }, ease:'power2.out' }) });
@@ -316,24 +407,42 @@ ScrollTrigger.create({ trigger:'.spec-item', start:'top 90%', once:true,
   onEnter: () => gsap.to('.spec-item', { opacity:1, x:0, duration:.6*D, stagger:.08, ease:'power2.out' }) });
 
 gsap.utils.toArray('.section-title').forEach(title => {
-  const chars = new SplitText(title, { type:'chars' }).chars;
+  const chars = splitChars(title);
   gsap.set(chars, { yPercent:100, opacity:0, rotationX:-60, transformOrigin:'50% 100% -30px' });
   ScrollTrigger.create({ trigger: title, start:'top 85%', once:true,
     onEnter: () => gsap.to(chars, { yPercent:0, opacity:1, rotationX:0, duration:1.3*D, stagger:.035, ease:'expo.out' }) });
 });
 
+gsap.fromTo('.manifesto-col', { y:60, rotate:-1.2 }, {
+  y:-40, rotate:.8, ease:'none',
+  scrollTrigger:{ trigger:'.manifesto-col', start:'top bottom', end:'bottom top', scrub: REDUCE ? false : .8 }
+});
+
+gsap.to('.highlight', {
+  backgroundSize:'100% 38%', ease:'none',
+  scrollTrigger:{ trigger:'.highlight', start:'top 75%', end:'top 55%', scrub: REDUCE ? false : .5 }
+});
+
+const underlinePath = document.querySelector('.underline-draw path');
+const uLen = underlinePath.getTotalLength();
+gsap.set(underlinePath, { strokeDasharray:uLen, strokeDashoffset:uLen });
+gsap.to(underlinePath, {
+  strokeDashoffset:0, ease:'none',
+  scrollTrigger:{ trigger:'.process-text', start:'top 70%', end:'bottom 50%', scrub: REDUCE ? false : .6 }
+});
+
+gsap.set('.stamp', { scale:2.4, opacity:0, filter:'blur(6px)' });
+ScrollTrigger.create({ trigger:'.stamp', start:'top 88%', once:true,
+  onEnter: () => gsap.to('.stamp', { scale:1, opacity:1, filter:'blur(0px)', duration:.7*D, stagger:.12, ease:'back.out(2.2)' }) });
+
 /* =====================================================================
-   4. ILLUSTRAZIONI LINE-ART — il tratto si disegna da solo allo scroll
-   (stroke-dashoffset animato su path/circle/ellipse/line), con wobble
-   in hover. Chi ha .spin-slow (icona tornio) prosegue a ruotare di suo via CSS.
+   5. ILLUSTRAZIONI LINE-ART — self-draw allo scroll + wobble in hover
    ===================================================================== */
 gsap.utils.toArray('.sketch').forEach(svg => {
   const shapes = svg.querySelectorAll('path, circle, ellipse, line');
   shapes.forEach(s => { const len = s.getTotalLength(); s.style.strokeDasharray = len; s.style.strokeDashoffset = len; });
-
   ScrollTrigger.create({ trigger: svg, start:'top 90%', once:true,
     onEnter: () => gsap.to(shapes, { strokeDashoffset:0, duration:1.6*D, ease:'power2.inOut', stagger:.15 }) });
-
   if (HOVER && !REDUCE) {
     svg.addEventListener('mouseenter', () => gsap.to(svg, { rotate:-4, scale:1.08, duration:.4, ease:'power2.out' }));
     svg.addEventListener('mouseleave', () => gsap.to(svg, { rotate:0, scale:1, duration:.5, ease:'elastic.out(1,.5)' }));
@@ -341,19 +450,16 @@ gsap.utils.toArray('.sketch').forEach(svg => {
 });
 
 /* =====================================================================
-   5. GALLERIE — svelamento clip-path (triggered) + hover CMYK (ghost cloni)
-   Un solo ciclo copre sia .reveal-wrap dell'Archivio sia del Workshop.
+   6. GALLERIE — svelamento clip-path (triggered) + hover CMYK (ghost cloni)
    ===================================================================== */
 gsap.utils.toArray('.reveal-wrap').forEach(wrap => {
   const media = wrap.querySelector('.media-asset');
   gsap.set(wrap, { clipPath:'inset(100% 0% 0% 0%)' });
   gsap.set(media, { scale:1.3 });
-
   ScrollTrigger.create({ trigger: wrap, start:'top 85%', once:true, onEnter: () => {
     gsap.to(wrap, { clipPath:'inset(0% 0% 0% 0%)', duration:1.8*D, ease:'expo.out' });
     gsap.to(media, { scale:1, duration:2.2*D, ease:'expo.out', delay:.1*D });
   }});
-
   if (HOVER && !REDUCE && media.tagName === 'IMG') {
     const gC = media.cloneNode(); gC.className = 'media-asset ghost ghost-cyan';
     const gM = media.cloneNode(); gM.className = 'media-asset ghost ghost-magenta';
@@ -368,9 +474,7 @@ gsap.utils.toArray('.reveal-wrap').forEach(wrap => {
 });
 
 /* =====================================================================
-   6. LIGHTBOX — legge ALL_MEDIA (Archivio + Workshop unificati)
-   Il click è agganciato per griglia mantenendo l'id assegnato in fase 0,
-   così l'ordine del DOM non deve più coincidere con l'ordine dell'array.
+   7. LIGHTBOX — legge ALL_MEDIA (Archivio + Workshop unificati)
    ===================================================================== */
 const lb = document.getElementById('lightbox');
 const [lbImg, lbGhostC, lbGhostM, lbCaption, lbCount] = ['lb-img','lb-ghost-c','lb-ghost-m','lb-caption','lb-count'].map(id => document.getElementById(id));
