@@ -1,391 +1,415 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cras_Station | Ceramica e Materia</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cras_Station | Ceramica e Materia</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-    <style>
-        :root { --bg: #f2f0ea; --ink: #111111; --magenta: #ff00c8; --cyan: #00eaff; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); overflow-x: hidden; overscroll-behavior: none; }
-        .fixed-body { overflow: hidden; height: 100vh; }
-        .serif { font-family: 'Playfair Display', serif; }
-        .mono { font-family: 'Space Mono', monospace; }
-        .persp { perspective: 900px; }
-        ::selection { background: var(--magenta); color: #fff; }
-        a:focus-visible, button:focus-visible { outline: 2px solid var(--magenta); outline-offset: 4px; }
+<style>
+  :root{ --bg:#f2f0ea; --ink:#111111; --magenta:#ff00c8; --cyan:#00eaff; }
+  body{ font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); overflow-x:hidden; overscroll-behavior:none; }
+  .fixed-body{ overflow:hidden; height:100vh; }
+  .serif{ font-family:'Playfair Display',serif; } .mono{ font-family:'Space Mono',monospace; } .persp{ perspective:900px; }
+  ::selection{ background:var(--magenta); color:#fff; }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--magenta); outline-offset:4px; }
 
-        .reveal-wrap { position: relative; overflow: hidden; clip-path: inset(100% 0% 0% 0%); cursor: pointer; }
-        .parallax-wrap { width: 100%; height: 120%; position: relative; top: -10%; will-change: transform; }
-        .media-asset { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
-        .media-asset.ghost { position: absolute; inset: 0; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
-        .ghost-cyan { filter: url(#f-cyan); }
-        .ghost-magenta { filter: url(#f-magenta); }
-        video.media-asset { transition: filter .6s cubic-bezier(.19,1,.22,1); }
-        .reveal-wrap:hover video.media-asset { filter: saturate(1.5) contrast(1.05); }
-        .expand-hint { transition: opacity .3s ease; }
-        .reveal-wrap:hover .expand-hint { opacity: 1; }
+  /* Scatole cinesi: reveal-wrap (clip-path) → parallax-wrap (scrub Y) → media-asset (scale/hover).
+     Livelli separati = nessun conflitto di transform tra le tre animazioni GSAP indipendenti. */
+  .reveal-wrap{ position:relative; overflow:hidden; clip-path:inset(100% 0% 0% 0%); cursor:pointer; }
+  .parallax-wrap{ width:100%; height:120%; position:relative; top:-10%; will-change:transform; }
+  .media-asset{ width:100%; height:100%; object-fit:cover; display:block; will-change:transform; }
 
-        .sketch { transform-origin: center; overflow: visible; filter: url(#f-rough); }
-        .sketch path, .sketch circle, .sketch ellipse, .sketch line { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        @keyframes spin-slow { to { transform: rotate(360deg); } }
-        .spin-slow { animation: spin-slow 7s linear infinite; }
+  /* Hover punk: due cloni filtrati via SVG feColorMatrix → disregistrazione CMYK ciano/magenta. */
+  .media-asset.ghost{ position:absolute; inset:0; opacity:0; pointer-events:none; mix-blend-mode:screen; }
+  .ghost-cyan{ filter:url(#f-cyan); } .ghost-magenta{ filter:url(#f-magenta); }
+  video.media-asset{ transition:filter .6s cubic-bezier(.19,1,.22,1); }
+  .reveal-wrap:hover video.media-asset{ filter:saturate(1.5) contrast(1.05); }
 
-        #preloader { position: fixed; inset: 0; background: var(--ink); color: var(--bg); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        body::after { content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .035; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .expand-hint{ transition:opacity .3s ease; } .reveal-wrap:hover .expand-hint{ opacity:1; }
 
-        #lb-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  /* Illustrazioni line-art: il tratto si "disegna" via stroke-dashoffset (animato in JS).
+     Il filtro f-rough applica un jitter a bassa frequenza (feTurbulence+feDisplacementMap):
+     stesso set di forme, resa "fotocopiata e storta" da fanzine invece che vettoriale pulita. */
+  .sketch{ transform-origin:center; overflow:visible; filter:url(#f-rough); }
+  .sketch path, .sketch circle, .sketch ellipse, .sketch line{ fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  @keyframes spin-slow{ to{ transform:rotate(360deg); } }
+  .spin-slow{ animation:spin-slow 7s linear infinite; }
 
-        .glitch-link { position: relative; display: inline-block; }
-        .glitch-link::before, .glitch-link::after { content: attr(data-text); position: absolute; inset: 0; opacity: 0; transition: transform .18s ease, opacity .18s ease; }
-        .glitch-link::before { color: var(--cyan); mix-blend-mode: screen; }
-        .glitch-link::after { color: var(--magenta); mix-blend-mode: screen; }
-        .glitch-link:hover::before { opacity: .85; transform: translate(-3px, 2px); }
-        .glitch-link:hover::after { opacity: .85; transform: translate(3px, -2px); }
+  #preloader{ position:fixed; inset:0; background:var(--ink); color:var(--bg); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; }
 
-        @media (prefers-reduced-motion: reduce) { * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
-    </style>
+  /* Grana da fanzine fotocopiata, texture DIY a costo zero. */
+  body::after{ content:''; position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  #lb-frame img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+
+  /* Glitch CMYK sui link di contatto: puro CSS, content:attr() clona il testo
+     due volte senza duplicare markup, sfasato di 3px in direzioni opposte. */
+  .glitch-link{ position:relative; display:inline-block; }
+  .glitch-link::before, .glitch-link::after{ content:attr(data-text); position:absolute; inset:0; opacity:0; transition:transform .18s ease, opacity .18s ease; }
+  .glitch-link::before{ color:var(--cyan); mix-blend-mode:screen; }
+  .glitch-link::after{ color:var(--magenta); mix-blend-mode:screen; }
+  .glitch-link:hover::before{ opacity:.85; transform:translate(-3px,2px); }
+  .glitch-link:hover::after{ opacity:.85; transform:translate(3px,-2px); }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
 </head>
 <body class="fixed-body">
 
-    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
-        <defs>
-            <filter id="f-cyan"><feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
-            <filter id="f-magenta"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
-            <filter id="f-rough" x="-20%" y="-20%" width="140%" height="140%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="n"/>
-                <feDisplacementMap in="SourceGraphic" in2="n" scale="7"/>
-            </filter>
-        </defs>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="f-cyan"><feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+    <filter id="f-magenta"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+    <filter id="f-rough" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="7"/>
+    </filter>
+  </defs>
+</svg>
+
+<div id="preloader">
+  <video class="absolute inset-0 w-full h-full object-cover opacity-40 preloader-vid" autoplay loop muted playsinline>
+    <source src="img/introvideo.mp4" type="video/mp4">
+  </video>
+  <div class="z-10 text-center mix-blend-difference">
+    <h1 id="preloader-title" class="serif persp text-5xl md:text-8xl uppercase tracking-widest overflow-hidden">Cras_Station</h1>
+    <div class="flex items-center justify-center gap-4 mt-6">
+      <span id="preloader-progress" class="mono text-xs tabular-nums">00</span>
+      <p class="mono text-xs tracking-[0.5em] uppercase opacity-80">Loading system</p>
+    </div>
+  </div>
+</div>
+
+<nav class="fixed top-0 w-full p-6 flex justify-between items-center z-50 mix-blend-difference text-white opacity-0 nav-anim">
+  <div class="mono text-sm tracking-widest uppercase font-bold">Cras_Station</div>
+  <div class="hidden md:flex gap-8 mono text-xs tracking-widest uppercase">
+    <a href="#archivio" class="hover:underline decoration-2 underline-offset-4 hover:decoration-[#ff00c8] transition">Archivio</a>
+    <a href="#workshop" class="hover:underline decoration-2 underline-offset-4 hover:decoration-[#00eaff] transition">Workshop</a>
+    <a href="#contatti" class="hover:underline decoration-2 underline-offset-4 hover:decoration-[#ff00c8] transition">Contatti</a>
+  </div>
+</nav>
+
+<main id="main-content">
+  <header class="h-screen w-full flex flex-col justify-end items-center relative p-6 pb-20 overflow-hidden">
+    <div class="z-10 text-center w-full mix-blend-difference text-white">
+      <h2 id="hero-title" class="serif persp text-[5rem] md:text-[12vw] leading-none tracking-tighter w-full">CERAMI_CRAS</h2>
+    </div>
+    <div class="absolute inset-0 z-0 parallax-wrap" data-speed="0.3">
+      <img class="media-asset hero-media" src="img/hero.jpeg" alt="Texture argilla">
+      <div class="absolute inset-0 bg-black/15"></div>
+    </div>
+  </header>
+
+  <section id="laboratorio" class="py-32 px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 items-center bg-[#f2f0ea]">
+    <div class="reveal-wrap h-[70vh] w-full rounded-sm" style="cursor:default">
+      <div class="parallax-wrap" data-speed="0.15">
+        <video class="media-asset" autoplay loop muted playsinline><source src="img/video intro2.mp4" type="video/mp4"></video>
+      </div>
+    </div>
+    <div class="space-y-8 pr-0 md:pr-24">
+      <svg class="sketch w-14 h-20 text-[#111111]" viewBox="0 0 160 240" aria-hidden="true">
+        <path d="M80,10 C55,10 45,35 50,60 C40,75 25,95 25,140 C25,195 45,225 80,230 C115,225 135,195 135,140 C135,95 120,75 110,60 C115,35 105,10 80,10 Z"/>
+        <path d="M50,70 C25,80 20,110 45,125"/>
+        <path d="M110,70 C135,80 140,110 115,125"/>
+      </svg>
+      <p class="mono text-xs tracking-[0.3em] uppercase text-stone-500 font-bold border-b border-stone-300 pb-2 inline-block">Manifesto DIY</p>
+      <h3 class="serif text-4xl md:text-6xl leading-tight process-text">La ceramica è il ritratto del mio io. Imperfetta, cruda, reale, punk.</h3>
+      <p class="text-lg text-stone-600 leading-relaxed fade-text">Non nasco da uno stampo: nasco dalle mani, dagli errori tenuti, dalle crepe che scelgo di non nascondere. Lavoro l'argilla come si scrive una fanzine — di getto, senza bozzetto, lasciando che il gesto sbagliato diventi la texture finale. Ogni smalto è un esperimento chimico fuori controllo; ogni pezzo che sopravvive alla cottura porta addosso il segno di quella scommessa.</p>
+      <ul class="mono text-xs uppercase tracking-widest text-stone-500 space-y-2 pt-2">
+        <li class="spec-item">→ Argilla refrattaria bianca, lavorazione a mano</li>
+        <li class="spec-item">→ Cottura 1220°C, doppio ciclo in forno a gas</li>
+        <li class="spec-item">→ Colombino, pizzicato, tornio manuale</li>
+        <li class="spec-item">→ Smalti sperimentali — esito mai garantito</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="archivio" class="py-32 px-4 md:px-12 bg-[#111111] text-[#f2f0ea] relative z-10">
+    <div class="mb-32 flex justify-between items-end border-b border-stone-800 pb-8">
+      <h2 class="serif persp text-5xl md:text-8xl section-title">Archivio Visivo</h2>
+      <div class="hidden md:flex items-end gap-4">
+        <svg class="sketch w-12 h-12 text-gray-500" viewBox="0 0 160 160" aria-hidden="true">
+          <ellipse cx="80" cy="60" rx="50" ry="14"/>
+          <path d="M30,60 C30,60 30,110 55,130 C75,145 85,145 105,130 C130,110 130,60 130,60"/>
+          <path d="M80,60 L68,80 L92,95 L70,115 L85,132"/>
+        </svg>
+        <p class="mono text-xs uppercase tracking-[0.4em] text-gray-500">Vol. 1</p>
+      </div>
+    </div>
+    <!-- Griglia popolata da JS a partire dall'array GALLERY: nessuna ripetizione di markup. -->
+    <div id="archivio-grid" class="grid grid-cols-1 md:grid-cols-12 gap-y-24 md:gap-y-40 gap-x-6"></div>
+  </section>
+
+  <section id="workshop" class="py-32 px-4 md:px-12 bg-[#f2f0ea] relative z-10">
+    <div class="mb-24 flex justify-between items-end border-b border-stone-300 pb-8">
+      <h2 class="serif persp text-5xl md:text-8xl section-title">Workshop</h2>
+      <svg class="sketch spin-slow w-12 h-12 text-stone-500" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="46"/>
+        <circle cx="60" cy="60" r="6"/>
+        <path d="M60,14 L60,106"/>
+        <path d="M14,60 L106,60"/>
+      </svg>
+    </div>
+    <p class="mono text-sm text-stone-500 max-w-xl mb-16 fade-text">Tre percorsi, un solo laboratorio: si entra a mani vuote, si esce con qualcosa di storto e vero. Posti limitati, si lavora fianco a fianco.</p>
+    <!-- Griglia popolata da JS a partire dall'array WORKSHOP: stesso motore della galleria (reveal + CMYK hover). -->
+    <div id="workshop-grid" class="grid grid-cols-1 md:grid-cols-3 gap-10"></div>
+  </section>
+
+  <section id="contatti" class="py-32 px-4 md:px-12 bg-[#111111] text-[#f2f0ea] relative z-10">
+    <div class="flex items-center gap-6 mb-16">
+      <h2 class="serif persp text-5xl md:text-8xl section-title">Contatti</h2>
+      <svg class="sketch w-16 h-10 text-[#ff00c8] hidden md:block" viewBox="0 0 160 100" aria-hidden="true">
+        <circle cx="30" cy="50" r="14"/><circle cx="60" cy="35" r="6"/><circle cx="82" cy="60" r="9"/>
+        <circle cx="106" cy="30" r="4"/><circle cx="128" cy="55" r="7"/>
+        <path d="M30,64 L26,85"/><path d="M82,69 L86,88"/>
+      </svg>
+    </div>
+    <p class="mono text-sm text-gray-400 max-w-lg mb-14 fade-text">Commissioni su misura, collaborazioni, domande sui workshop: scrivi o scorri il feed, rispondo sempre io.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mono text-sm uppercase tracking-widest">
+      <a href="https://instagram.com/cerami_cras" target="_blank" rel="noopener" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#ff00c8] transition-colors" data-text="@cerami_cras">
+        <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Instagram — Archivio</span>@cerami_cras
+      </a>
+      <a href="https://instagram.com/cras_station" target="_blank" rel="noopener" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#00eaff] transition-colors" data-text="@cras_station">
+        <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Instagram — Studio</span>@cras_station
+      </a>
+      <a href="mailto:cras.station@gmail.com" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#ff00c8] transition-colors" data-text="cras.station@gmail.com">
+        <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Mail — Commissioni &amp; Info</span>cras.station@gmail.com
+      </a>
+    </div>
+  </section>
+
+  <footer class="bg-[#111111] text-[#f2f0ea] py-32 px-4 md:px-12 border-t border-stone-800 text-center">
+    <svg class="sketch w-10 h-16 mx-auto mb-6 text-[#f2f0ea]" viewBox="0 0 120 200" aria-hidden="true">
+      <path d="M60,10 C40,10 30,25 35,45 C20,55 15,75 30,95 C15,110 10,135 30,150 C15,165 15,185 40,195 C50,198 70,198 80,195 C105,185 105,165 90,150 C110,135 105,110 90,95 C105,75 100,55 85,45 C90,25 80,10 60,10 Z"/>
     </svg>
+    <h2 class="serif text-4xl md:text-6xl mb-8 uppercase tracking-widest">Cras_Station</h2>
+    <p class="mono text-xs uppercase tracking-[0.3em] text-stone-500">Cerami_Cras &bull; 2026</p>
+  </footer>
+</main>
 
-    <div id="preloader">
-        <video class="absolute inset-0 w-full h-full object-cover opacity-40 preloader-vid" autoplay loop muted playsinline>
-            <source src="img/introvideo.mp4" type="video/mp4">
-        </video>
-        <div class="z-10 text-center mix-blend-difference">
-            <h1 id="preloader-title" class="serif persp text-5xl md:text-8xl uppercase tracking-widest overflow-hidden">Cras_Station</h1>
-            <div class="flex items-center justify-center gap-4 mt-6">
-                <span id="preloader-progress" class="mono text-xs tabular-nums">00</span>
-                <p class="mono text-xs tracking-[0.5em] uppercase opacity-80">Loading system</p>
-            </div>
-        </div>
+<div id="lightbox" class="fixed inset-0 z-[9998] hidden items-center justify-center bg-[#111111]" role="dialog" aria-modal="true" aria-label="Galleria a schermo intero">
+  <button id="lb-close" class="absolute top-6 right-6 mono text-xs uppercase tracking-widest text-[#f2f0ea] hover:text-[#ff00c8] transition z-10" aria-label="Chiudi">Chiudi ✕</button>
+  <button id="lb-prev" class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 mono text-2xl md:text-4xl text-[#f2f0ea] hover:text-[#00eaff] transition z-10" aria-label="Precedente">←</button>
+  <button id="lb-next" class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 mono text-2xl md:text-4xl text-[#f2f0ea] hover:text-[#00eaff] transition z-10" aria-label="Successiva">→</button>
+  <div id="lb-frame" class="relative w-[90vw] h-[75vh]">
+    <img id="lb-img" src="" alt="">
+    <img id="lb-ghost-c" src="" alt="" class="opacity-0 pointer-events-none" style="filter:url(#f-cyan); mix-blend-mode:screen;">
+    <img id="lb-ghost-m" src="" alt="" class="opacity-0 pointer-events-none" style="filter:url(#f-magenta); mix-blend-mode:screen;">
+  </div>
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 mono text-xs uppercase tracking-[0.3em] text-[#f2f0ea]/70 flex items-center gap-3">
+    <span id="lb-caption"></span><span class="text-[#f2f0ea]/40">—</span><span id="lb-count"></span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script src="https://assets.incode.it/gsap-business/minified/SplitText.min.js"></script>
+
+<script>
+gsap.registerPlugin(ScrollTrigger, SplitText);
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const HOVER  = matchMedia('(hover: hover)').matches;
+const D = REDUCE ? 0.01 : 1;
+
+/* =====================================================================
+   0. DATI MEDIA — unica fonte di verità per entrambe le griglie e la
+   lightbox. ALL_MEDIA unisce Archivio + Workshop con un id progressivo:
+   la lightbox naviga sull'intero set, indipendentemente da dove si apre.
+   ===================================================================== */
+const GALLERY = [
+  { src:'img/vaso1.jpeg',      alt:'cuore spezzato',    n:'01', title:'Cuore Spezzato',    tag:'Argilla bianca',   speed:.18, span:'md:col-span-6 h-[75vh]' },
+  { src:'img/vaso2.jpeg',      alt:'dea',                n:'02', title:'Dea',               tag:'',                 speed:-.12,span:'md:col-span-4 md:col-start-9 h-[60vh] md:mt-48' },
+  { src:'img/posacenere.jpeg', alt:'posacenere kabuki',  n:'03', title:'Posacenere Kabuki', tag:'Smalti minerali',  speed:.22, span:'md:col-span-8 md:col-start-3 h-[85vh]' },
+  { src:'img/piccione.jpeg',   alt:'sculturina',         n:'04', title:'Sculturina',        tag:'',                 speed:-.16,span:'md:col-span-3 md:col-start-2 h-[50vh] md:-mt-32 relative z-20', extra:'shadow-2xl' },
+  { src:'img/cuore.jpg',       alt:'vaso cuore',         n:'05', title:'Vaso Cuore',        tag:'',                 speed:.14, span:'md:col-span-5 md:col-start-7 h-[70vh]' },
+  { src: "img/set.jpg",     alt:'set da the',   n:'06', title:'set  decorato e tartaruga ninja',  tag:'Ingobbio ',    speed:-.10,span:'md:col-span-5 md:col-start-2 h-[65vh] md:mt-12' },
+  { src:'img/over.jpg',      alt:'totem rituale',      n:'07', title:'Totem Rituale',     tag:'',                 speed:.20, span:'md:col-span-6 md:col-start-7 h-[80vh] md:-mt-20' },
+];
+const WORKSHOP = [
+  { src:'img/base.jpg',         alt:'workshop base',         n:'01', title:'Workshop Base',         tag:'Impasto, colombino, foggiatura' },
+  { src:'img/decorazione.jpg',  alt:'workshop decorazione',  n:'02', title:'Workshop Decorazione',  tag:'Ingobbi, smalti, texture' },
+  { src:'img/tornio.jpeg',       alt:'workshop tornio',       n:'03', title:'Workshop Tornio',       tag:'Centratura e foggiatura al tornio' },
+];
+const ALL_MEDIA = [...GALLERY, ...WORKSHOP];
+ALL_MEDIA.forEach((m, i) => m.id = i);
+
+document.getElementById('archivio-grid').innerHTML = GALLERY.map(g => `
+  <div class="${g.span}">
+    <div class="reveal-wrap gallery-item h-full w-full bg-stone-900 ${g.extra||''}">
+      <div class="parallax-wrap" data-speed="${g.speed}"><img class="media-asset" src="${g.src}" alt="${g.alt}"></div>
+      <span class="expand-hint mono text-[10px] uppercase tracking-widest absolute bottom-3 right-3 px-2 py-1 bg-[#f2f0ea] text-[#111111] opacity-0 pointer-events-none z-10">Espandi ↗</span>
     </div>
-
-    <nav class="fixed top-0 w-full p-6 flex justify-between items-center z-50 mix-blend-difference text-white opacity-0 nav-anim">
-        <div class="mono text-sm tracking-widest uppercase font-bold">Cras_Station</div>
-        <div class="hidden md:flex gap-8 mono text-xs tracking-widest uppercase">
-            <a href="#archivio" class="hover:underline decoration-2 underline-offset-4 hover:decoration-[#ff00c8] transition">Archivio</a>
-            <a href="#workshop" class="hover:underline decoration-2 underline-offset-4 hover:decoration-[#00eaff] transition">Workshop</a>
-            <a href="#contatti" class="hover:underline decoration-2 underline-offset-4 hover:decoration-[#ff00c8] transition">Contatti</a>
-        </div>
-    </nav>
-
-    <main id="main-content">
-        <header class="h-screen w-full flex flex-col justify-end items-center relative p-6 pb-20 overflow-hidden">
-            <div class="z-10 text-center w-full mix-blend-difference text-white">
-                <h2 id="hero-title" class="serif persp text-[5rem] md:text-[12vw] leading-none tracking-tighter w-full">CERAMI_CRAS</h2>
-            </div>
-            <div class="absolute inset-0 z-0 parallax-wrap" data-speed="0.3">
-                <img class="media-asset hero-media" src="img/hero.jpeg" alt="Texture argilla">
-                <div class="absolute inset-0 bg-black/15"></div>
-            </div>
-        </header>
-
-        <section id="laboratorio" class="py-32 px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 items-center bg-[#f2f0ea]">
-            <div class="reveal-wrap h-[70vh] w-full rounded-sm" style="cursor:default">
-                <div class="parallax-wrap" data-speed="0.15">
-                    <video class="media-asset" autoplay loop muted playsinline><source src="img/video intro2.mp4" type="video/mp4"></video>
-                </div>
-            </div>
-            <div class="space-y-8 pr-0 md:pr-24">
-                <svg class="sketch w-14 h-20 text-[#111111]" viewBox="0 0 160 240" aria-hidden="true">
-                    <path d="M80,10 C55,10 45,35 50,60 C40,75 25,95 25,140 C25,195 45,225 80,230 C115,225 135,195 135,140 C135,95 120,75 110,60 C115,35 105,10 80,10 Z"/>
-                    <path d="M50,70 C25,80 20,110 45,125"/>
-                    <path d="M110,70 C135,80 140,110 115,125"/>
-                </svg>
-                <p class="mono text-xs tracking-[0.3em] uppercase text-stone-500 font-bold border-b border-stone-300 pb-2 inline-block">Manifesto DIY</p>
-                <h3 class="serif text-4xl md:text-6xl leading-tight process-text">La ceramica è il ritratto del mio io. Imperfetta, cruda, reale, punk.</h3>
-                <p class="text-lg text-stone-600 leading-relaxed fade-text">Non nasco da uno stampo: nasco dalle mani, dagli errori tenuti, dalle crepe che scelgo di non nascondere. Lavoro l'argilla come si scrive una fanzine — di getto, senza bozzetto, lasciando che il gesto sbagliato diventi la texture finale. Ogni smalto è un esperimento chimico fuori controllo; ogni pezzo che sopravvive alla cottura porta addosso il segno di quella scommessa.</p>
-                <ul class="mono text-xs uppercase tracking-widest text-stone-500 space-y-2 pt-2">
-                    <li class="spec-item">→ Argilla refrattaria bianca, lavorazione a mano</li>
-                    <li class="spec-item">→ Cottura 1220°C, doppio ciclo in forno a gas</li>
-                    <li class="spec-item">→ Colombino, pizzicato, tornio manuale</li>
-                    <li class="spec-item">→ Smalti sperimentali — esito mai garantito</li>
-                </ul>
-            </div>
-        </section>
-
-        <section id="archivio" class="py-32 px-4 md:px-12 bg-[#111111] text-[#f2f0ea] relative z-10">
-            <div class="mb-32 flex justify-between items-end border-b border-stone-800 pb-8">
-                <h2 class="serif persp text-5xl md:text-8xl section-title">Archivio Visivo</h2>
-                <div class="hidden md:flex items-end gap-4">
-                    <svg class="sketch w-12 h-12 text-gray-500" viewBox="0 0 160 160" aria-hidden="true">
-                        <ellipse cx="80" cy="60" rx="50" ry="14"/>
-                        <path d="M30,60 C30,60 30,110 55,130 C75,145 85,145 105,130 C130,110 130,60 130,60"/>
-                        <path d="M80,60 L68,80 L92,95 L70,115 L85,132"/>
-                    </svg>
-                    <p class="mono text-xs uppercase tracking-[0.4em] text-gray-500">Vol. 1</p>
-                </div>
-            </div>
-            <div id="archivio-grid" class="grid grid-cols-1 md:grid-cols-12 gap-y-24 md:gap-y-40 gap-x-6"></div>
-        </section>
-
-        <section id="workshop" class="py-32 px-4 md:px-12 bg-[#f2f0ea] relative z-10">
-            <div class="mb-24 flex justify-between items-end border-b border-stone-300 pb-8">
-                <h2 class="serif persp text-5xl md:text-8xl section-title">Workshop</h2>
-                <svg class="sketch spin-slow w-12 h-12 text-stone-500" viewBox="0 0 120 120" aria-hidden="true">
-                    <circle cx="60" cy="60" r="46"/>
-                    <circle cx="60" cy="60" r="6"/>
-                    <path d="M60,14 L60,106"/>
-                    <path d="M14,60 L106,60"/>
-                </svg>
-            </div>
-            <p class="mono text-sm text-stone-500 max-w-xl mb-16 fade-text">Tre percorsi, un solo laboratorio: si entra a mani vuote, si esce con qualcosa di storto e vero. Posti limitati, si lavora fianco a fianco.</p>
-            <div id="workshop-grid" class="grid grid-cols-1 md:grid-cols-3 gap-10"></div>
-        </section>
-
-        <section id="contatti" class="py-32 px-4 md:px-12 bg-[#111111] text-[#f2f0ea] relative z-10">
-            <div class="flex items-center gap-6 mb-16">
-                <h2 class="serif persp text-5xl md:text-8xl section-title">Contatti</h2>
-                <svg class="sketch w-16 h-10 text-[#ff00c8] hidden md:block" viewBox="0 0 160 100" aria-hidden="true">
-                    <circle cx="30" cy="50" r="14"/><circle cx="60" cy="35" r="6"/><circle cx="82" cy="60" r="9"/>
-                    <circle cx="106" cy="30" r="4"/><circle cx="128" cy="55" r="7"/>
-                    <path d="M30,64 L26,85"/><path d="M82,69 L86,88"/>
-                </svg>
-            </div>
-            <p class="mono text-sm text-gray-400 max-w-lg mb-14 fade-text">Commissioni su misura, collaborazioni, domande sui workshop: scrivi o scorri il feed, rispondo sempre io.</p>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mono text-sm uppercase tracking-widest">
-                <a href="https://instagram.com/cerami_cras" target="_blank" rel="noopener" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#ff00c8] transition-colors" data-text="@cerami_cras">
-                    <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Instagram — Archivio</span>@cerami_cras
-                </a>
-                <a href="https://instagram.com/cras_station" target="_blank" rel="noopener" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#00eaff] transition-colors" data-text="@cras_station">
-                    <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Instagram — Studio</span>@cras_station
-                </a>
-                <a href="mailto:cras.station@gmail.com" class="glitch-link border-t border-stone-800 pt-4 hover:text-[#ff00c8] transition-colors" data-text="cras.station@gmail.com">
-                    <span class="block text-xs text-gray-500 mb-2 normal-case tracking-normal">Mail — Commissioni &amp; Info</span>cras.station@gmail.com
-                </a>
-            </div>
-        </section>
-
-        <footer class="bg-[#111111] text-[#f2f0ea] py-32 px-4 md:px-12 border-t border-stone-800 text-center">
-            <svg class="sketch w-10 h-16 mx-auto mb-6 text-[#f2f0ea]" viewBox="0 0 120 200" aria-hidden="true">
-                <path d="M60,10 C40,10 30,25 35,45 C20,55 15,75 30,95 C15,110 10,135 30,150 C15,165 15,185 40,195 C50,198 70,198 80,195 C105,185 105,165 90,150 C110,135 105,110 90,95 C105,75 100,55 85,45 C90,25 80,10 60,10 Z"/>
-            </svg>
-            <h2 class="serif text-4xl md:text-6xl mb-8 uppercase tracking-widest">Cras_Station</h2>
-            <p class="mono text-xs uppercase tracking-[0.3em] text-stone-500">Cerami_Cras &bull; 2026</p>
-        </footer>
-    </main>
-
-    <div id="lightbox" class="fixed inset-0 z-[9998] hidden items-center justify-center bg-[#111111]" role="dialog" aria-modal="true" aria-label="Galleria a schermo intero">
-        <button id="lb-close" class="absolute top-6 right-6 mono text-xs uppercase tracking-widest text-[#f2f0ea] hover:text-[#ff00c8] transition z-10" aria-label="Chiudi">Chiudi ✕</button>
-        <button id="lb-prev" class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 mono text-2xl md:text-4xl text-[#f2f0ea] hover:text-[#00eaff] transition z-10" aria-label="Precedente">←</button>
-        <button id="lb-next" class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 mono text-2xl md:text-4xl text-[#f2f0ea] hover:text-[#00eaff] transition z-10" aria-label="Successiva">→</button>
-        <div id="lb-frame" class="relative w-[90vw] h-[75vh]">
-            <img id="lb-img" src="" alt="">
-            <img id="lb-ghost-c" src="" alt="" class="opacity-0 pointer-events-none" style="filter:url(#f-cyan); mix-blend-mode:screen;">
-            <img id="lb-ghost-m" src="" alt="" class="opacity-0 pointer-events-none" style="filter:url(#f-magenta); mix-blend-mode:screen;">
-        </div>
-        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 mono text-xs uppercase tracking-[0.3em] text-[#f2f0ea]/70 flex items-center gap-3">
-            <span id="lb-caption"></span><span class="text-[#f2f0ea]/40">—</span><span id="lb-count"></span>
-        </div>
+    <div class="flex justify-between mt-4 mono text-xs uppercase tracking-widest text-gray-400">
+      <span>${g.n}. ${g.title}</span><span>${g.tag}</span>
     </div>
+  </div>`).join('');
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-    <script src="https://assets.incode.it/gsap-business/minified/SplitText.min.js"></script>
+document.getElementById('workshop-grid').innerHTML = WORKSHOP.map(w => `
+  <div>
+    <div class="reveal-wrap gallery-item h-[55vh] w-full bg-stone-300">
+      <div class="parallax-wrap" data-speed=".16"><img class="media-asset" src="${w.src}" alt="${w.alt}"></div>
+      <span class="expand-hint mono text-[10px] uppercase tracking-widest absolute bottom-3 right-3 px-2 py-1 bg-[#111111] text-[#f2f0ea] opacity-0 pointer-events-none z-10">Espandi ↗</span>
+    </div>
+    <div class="mt-4">
+      <p class="mono text-xs uppercase tracking-widest text-stone-800 font-bold">${w.n}. ${w.title}</p>
+      <p class="mono text-[11px] uppercase tracking-widest text-stone-500 mt-1">${w.tag}</p>
+    </div>
+  </div>`).join('');
 
-    <script>
-        gsap.registerPlugin(ScrollTrigger, SplitText);
-        const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const HOVER = matchMedia('(hover: hover)').matches;
-        const D = REDUCE ? 0.01 : 1;
+/* =====================================================================
+   1. PRELOADER + HERO — timeline teatrale unica (nessuna callback separata)
+   ===================================================================== */
+const preChars  = new SplitText('#preloader-title', { type:'chars' });
+const heroChars = new SplitText('#hero-title', { type:'chars' });
+const progress  = { v:0 };
+const progressEl = document.getElementById('preloader-progress');
 
-        // 1. Dati Media (Ho corretto set.jpg per te)
-        const GALLERY = [
-            { src: 'img/vaso1.jpeg',      alt: 'cuore spezzato',    n: '01', title: 'Cuore Spezzato',    tag: 'Argilla bianca',  speed: .18,  span: 'md:col-span-6 h-[75vh]' },
-            { src: 'img/vaso2.jpeg',      alt: 'dea',               n: '02', title: 'Dea',               tag: '',                speed: -.12, span: 'md:col-span-4 md:col-start-9 h-[60vh] md:mt-48' },
-            { src: 'img/posacenere.jpeg', alt: 'posacenere kabuki', n: '03', title: 'Posacenere Kabuki', tag: 'Smalti minerali', speed: .22,  span: 'md:col-span-8 md:col-start-3 h-[85vh]' },
-            { src: 'img/piccione.jpeg',   alt: 'sculturina',        n: '04', title: 'Sculturina',        tag: '',                speed: -.16, span: 'md:col-span-3 md:col-start-2 h-[50vh] md:-mt-32 relative z-20', extra: 'shadow-2xl' },
-            { src: 'img/cuore.jpg',       alt: 'vaso cuore',        n: '05', title: 'Vaso Cuore',        tag: '',                speed: .14,  span: 'md:col-span-5 md:col-start-7 h-[70vh]' },
-            { src: 'img/set.jpg',         alt: 'set da the',        n: '06', title: 'Set Tartaruga Ninja', tag: 'Ingobbio',      speed: -.10, span: 'md:col-span-5 md:col-start-2 h-[65vh] md:mt-12' },
-            { src: 'img/over.jpg',        alt: 'totem rituale',     n: '07', title: 'Totem Rituale',     tag: '',                speed: .20,  span: 'md:col-span-6 md:col-start-7 h-[80vh] md:-mt-20' },
-        ];
-        
-        const WORKSHOP = [
-            { src: 'img/base.jpg',        alt: 'workshop base',        n: '01', title: 'Workshop Base',        tag: 'Impasto, colombino, foggiatura' },
-            { src: 'img/decorazione.jpg', alt: 'workshop decorazione', n: '02', title: 'Workshop Decorazione', tag: 'Ingobbi, smalti, texture' },
-            { src: 'img/tornio.jpeg',     alt: 'workshop tornio',      n: '03', title: 'Workshop Tornio',      tag: 'Centratura e foggiatura al tornio' },
-        ];
-        
-        const ALL_MEDIA = [...GALLERY, ...WORKSHOP].map((m, i) => ({ ...m, id: i }));
+gsap.set([preChars.chars, heroChars.chars], { yPercent:100, opacity:0, rotationX:-70, transformOrigin:'50% 100% -40px' });
+gsap.set('.hero-media', { scale:1.25 });
 
-        // Generazione HTML dinamico
-        document.getElementById('archivio-grid').innerHTML = GALLERY.map(g => `
-            <div class="${g.span}">
-                <div class="reveal-wrap gallery-item h-full w-full bg-stone-900 ${g.extra || ''}">
-                    <div class="parallax-wrap" data-speed="${g.speed}"><img class="media-asset" src="${g.src}" alt="${g.alt}"></div>
-                    <span class="expand-hint mono text-[10px] uppercase tracking-widest absolute bottom-3 right-3 px-2 py-1 bg-[#f2f0ea] text-[#111111] opacity-0 pointer-events-none z-10">Espandi ↗</span>
-                </div>
-                <div class="flex justify-between mt-4 mono text-xs uppercase tracking-widest text-gray-400">
-                    <span>${g.n}. ${g.title}</span><span>${g.tag}</span>
-                </div>
-            </div>
-        `).join('');
+gsap.timeline({ onComplete: () => { document.body.classList.remove('fixed-body'); ScrollTrigger.refresh(); } })
+  .from(preChars.chars, { yPercent:0, opacity:1, rotationX:0, duration:1.4*D, stagger:.035, ease:'expo.out', delay:.2 }, 0)
+  .to(progress, { v:100, duration:1.6*D, ease:'power2.inOut', onUpdate:() => progressEl.textContent = String(Math.round(progress.v)).padStart(2,'0') }, 0)
+  .to('.preloader-vid', { scale:1.08, duration:1.4*D, ease:'power3.inOut' }, '+=0.2')
+  .to('#preloader', { yPercent:-100, duration:1.4*D, ease:'power4.inOut' }, '-=0.5')
+  .to('.hero-media', { scale:1, duration:2.2*D, ease:'expo.out' }, '-=1')
+  .to(heroChars.chars, { yPercent:0, opacity:1, rotationX:0, duration:1.4*D, stagger:.025, ease:'expo.out' }, '-=1.8')
+  .to('.nav-anim', { opacity:1, duration:.8*D, ease:'power2.out' }, '-=1.2');
 
-        document.getElementById('workshop-grid').innerHTML = WORKSHOP.map(w => `
-            <div>
-                <div class="reveal-wrap gallery-item h-[55vh] w-full bg-stone-300">
-                    <div class="parallax-wrap" data-speed=".16"><img class="media-asset" src="${w.src}" alt="${w.alt}"></div>
-                    <span class="expand-hint mono text-[10px] uppercase tracking-widest absolute bottom-3 right-3 px-2 py-1 bg-[#111111] text-[#f2f0ea] opacity-0 pointer-events-none z-10">Espandi ↗</span>
-                </div>
-                <div class="mt-4">
-                    <p class="mono text-xs uppercase tracking-widest text-stone-800 font-bold">${w.n}. ${w.title}</p>
-                    <p class="mono text-[11px] uppercase tracking-widest text-stone-500 mt-1">${w.tag}</p>
-                </div>
-            </div>
-        `).join('');
+/* =====================================================================
+   2. PARALLASSE — ciclo unico per hero + entrambe le griglie via data-speed
+   ===================================================================== */
+gsap.utils.toArray('.parallax-wrap[data-speed]').forEach(el => {
+  gsap.to(el, {
+    yPercent: parseFloat(el.dataset.speed) * 100, ease:'none',
+    scrollTrigger: { trigger: el.closest('.reveal-wrap') || el.closest('header'), start:'top bottom', end:'bottom top', scrub: REDUCE ? false : 1.2 }
+  });
+});
 
-        // 2. Preloader & Hero Timeline
-        const preChars = new SplitText('#preloader-title', { type: 'chars' });
-        const heroChars = new SplitText('#hero-title', { type: 'chars' });
-        const progress = { v: 0 };
-        const progressEl = document.getElementById('preloader-progress');
+/* =====================================================================
+   3. TIPOGRAFIA CINETICA
+   - .process-text  → reveal per linee (manifesto)
+   - .fade-text     → reveal per parole, stagger asincrono ("random")
+   - .spec-item     → lista specifiche tecniche, ingresso a scatti da sinistra
+   - .section-title → titoli di sezione (Archivio/Workshop/Contatti): ognuno
+     si anima sul PROPRIO trigger, non su uno fisso, per restare riusabile
+     su un numero arbitrario di sezioni senza toccare il JS.
+   ===================================================================== */
+gsap.set(new SplitText('.process-text', { type:'lines' }).lines, { y:40, opacity:0 });
+ScrollTrigger.create({ trigger:'.process-text', start:'top 85%', once:true,
+  onEnter: () => gsap.to('.process-text .line', { y:0, opacity:1, duration:1.4*D, stagger:.1, ease:'expo.out' }) });
 
-        gsap.set([preChars.chars, heroChars.chars], { yPercent: 100, opacity: 0, rotationX: -70, transformOrigin: '50% 100% -40px' });
-        gsap.set('.hero-media', { scale: 1.25 });
+gsap.utils.toArray('.fade-text').forEach(el => {
+  const words = new SplitText(el, { type:'words' }).words;
+  gsap.set(words, { opacity:0, y:14 });
+  ScrollTrigger.create({ trigger: el, start:'top 85%', once:true,
+    onEnter: () => gsap.to(words, { opacity:1, y:0, duration:.9*D, stagger:{ each:.025, from:'random' }, ease:'power2.out' }) });
+});
 
-        gsap.timeline({ onComplete: () => { document.body.classList.remove('fixed-body'); ScrollTrigger.refresh(); } })
-            .from(preChars.chars, { yPercent: 0, opacity: 1, rotationX: 0, duration: 1.4 * D, stagger: .035, ease: 'expo.out', delay: .2 }, 0)
-            .to(progress, { v: 100, duration: 1.6 * D, ease: 'power2.inOut', onUpdate: () => progressEl.textContent = String(Math.round(progress.v)).padStart(2, '0') }, 0)
-            .to('.preloader-vid', { scale: 1.08, duration: 1.4 * D, ease: 'power3.inOut' }, '+=0.2')
-            .to('#preloader', { yPercent: -100, duration: 1.4 * D, ease: 'power4.inOut' }, '-=0.5')
-            .to('.hero-media', { scale: 1, duration: 2.2 * D, ease: 'expo.out' }, '-=1')
-            .to(heroChars.chars, { yPercent: 0, opacity: 1, rotationX: 0, duration: 1.4 * D, stagger: .025, ease: 'expo.out' }, '-=1.8')
-            .to('.nav-anim', { opacity: 1, duration: .8 * D, ease: 'power2.out' }, '-=1.2');
+gsap.set('.spec-item', { opacity:0, x:-16 });
+ScrollTrigger.create({ trigger:'.spec-item', start:'top 90%', once:true,
+  onEnter: () => gsap.to('.spec-item', { opacity:1, x:0, duration:.6*D, stagger:.08, ease:'power2.out' }) });
 
-        // 3. Parallasse GSAP
-        gsap.utils.toArray('.parallax-wrap[data-speed]').forEach(el => {
-            gsap.to(el, {
-                yPercent: parseFloat(el.dataset.speed) * 100, ease: 'none',
-                scrollTrigger: { trigger: el.closest('.reveal-wrap') || el.closest('header'), start: 'top bottom', end: 'bottom top', scrub: REDUCE ? false : 1.2 }
-            });
-        });
+gsap.utils.toArray('.section-title').forEach(title => {
+  const chars = new SplitText(title, { type:'chars' }).chars;
+  gsap.set(chars, { yPercent:100, opacity:0, rotationX:-60, transformOrigin:'50% 100% -30px' });
+  ScrollTrigger.create({ trigger: title, start:'top 85%', once:true,
+    onEnter: () => gsap.to(chars, { yPercent:0, opacity:1, rotationX:0, duration:1.3*D, stagger:.035, ease:'expo.out' }) });
+});
 
-        // 4. Tipografia Cinetica
-        gsap.set(new SplitText('.process-text', { type: 'lines' }).lines, { y: 40, opacity: 0 });
-        ScrollTrigger.create({ trigger: '.process-text', start: 'top 85%', once: true, onEnter: () => gsap.to('.process-text .line', { y: 0, opacity: 1, duration: 1.4 * D, stagger: .1, ease: 'expo.out' }) });
+/* =====================================================================
+   4. ILLUSTRAZIONI LINE-ART — il tratto si disegna da solo allo scroll
+   (stroke-dashoffset animato su path/circle/ellipse/line), con wobble
+   in hover. Chi ha .spin-slow (icona tornio) prosegue a ruotare di suo via CSS.
+   ===================================================================== */
+gsap.utils.toArray('.sketch').forEach(svg => {
+  const shapes = svg.querySelectorAll('path, circle, ellipse, line');
+  shapes.forEach(s => { const len = s.getTotalLength(); s.style.strokeDasharray = len; s.style.strokeDashoffset = len; });
 
-        gsap.utils.toArray('.fade-text').forEach(el => {
-            const words = new SplitText(el, { type: 'words' }).words;
-            gsap.set(words, { opacity: 0, y: 14 });
-            ScrollTrigger.create({ trigger: el, start: 'top 85%', once: true, onEnter: () => gsap.to(words, { opacity: 1, y: 0, duration: .9 * D, stagger: { each: .025, from: 'random' }, ease: 'power2.out' }) });
-        });
+  ScrollTrigger.create({ trigger: svg, start:'top 90%', once:true,
+    onEnter: () => gsap.to(shapes, { strokeDashoffset:0, duration:1.6*D, ease:'power2.inOut', stagger:.15 }) });
 
-        gsap.set('.spec-item', { opacity: 0, x: -16 });
-        ScrollTrigger.create({ trigger: '.spec-item', start: 'top 90%', once: true, onEnter: () => gsap.to('.spec-item', { opacity: 1, x: 0, duration: .6 * D, stagger: .08, ease: 'power2.out' }) });
+  if (HOVER && !REDUCE) {
+    svg.addEventListener('mouseenter', () => gsap.to(svg, { rotate:-4, scale:1.08, duration:.4, ease:'power2.out' }));
+    svg.addEventListener('mouseleave', () => gsap.to(svg, { rotate:0, scale:1, duration:.5, ease:'elastic.out(1,.5)' }));
+  }
+});
 
-        gsap.utils.toArray('.section-title').forEach(title => {
-            const chars = new SplitText(title, { type: 'chars' }).chars;
-            gsap.set(chars, { yPercent: 100, opacity: 0, rotationX: -60, transformOrigin: '50% 100% -30px' });
-            ScrollTrigger.create({ trigger: title, start: 'top 85%', once: true, onEnter: () => gsap.to(chars, { yPercent: 0, opacity: 1, rotationX: 0, duration: 1.3 * D, stagger: .035, ease: 'expo.out' }) });
-        });
+/* =====================================================================
+   5. GALLERIE — svelamento clip-path (triggered) + hover CMYK (ghost cloni)
+   Un solo ciclo copre sia .reveal-wrap dell'Archivio sia del Workshop.
+   ===================================================================== */
+gsap.utils.toArray('.reveal-wrap').forEach(wrap => {
+  const media = wrap.querySelector('.media-asset');
+  gsap.set(wrap, { clipPath:'inset(100% 0% 0% 0%)' });
+  gsap.set(media, { scale:1.3 });
 
-        // 5. Animazioni SVG (Line-art)
-        gsap.utils.toArray('.sketch').forEach(svg => {
-            const shapes = svg.querySelectorAll('path, circle, ellipse, line');
-            shapes.forEach(s => { const len = s.getTotalLength(); s.style.strokeDasharray = len; s.style.strokeDashoffset = len; });
+  ScrollTrigger.create({ trigger: wrap, start:'top 85%', once:true, onEnter: () => {
+    gsap.to(wrap, { clipPath:'inset(0% 0% 0% 0%)', duration:1.8*D, ease:'expo.out' });
+    gsap.to(media, { scale:1, duration:2.2*D, ease:'expo.out', delay:.1*D });
+  }});
 
-            ScrollTrigger.create({ trigger: svg, start: 'top 90%', once: true, onEnter: () => gsap.to(shapes, { strokeDashoffset: 0, duration: 1.6 * D, ease: 'power2.inOut', stagger: .15 }) });
+  if (HOVER && !REDUCE && media.tagName === 'IMG') {
+    const gC = media.cloneNode(); gC.className = 'media-asset ghost ghost-cyan';
+    const gM = media.cloneNode(); gM.className = 'media-asset ghost ghost-magenta';
+    media.after(gM, gC);
+    const glitch = gsap.timeline({ paused:true })
+      .to([gC, gM], { opacity:.85, duration:.35, ease:'power3.out' }, 0)
+      .to(gC, { x:-6, y:5, duration:.35, ease:'power3.out' }, 0)
+      .to(gM, { x:6, y:-5, duration:.35, ease:'power3.out' }, 0);
+    wrap.addEventListener('mouseenter', () => glitch.play());
+    wrap.addEventListener('mouseleave', () => glitch.reverse());
+  }
+});
 
-            if (HOVER && !REDUCE) {
-                svg.addEventListener('mouseenter', () => gsap.to(svg, { rotate: -4, scale: 1.08, duration: .4, ease: 'power2.out' }));
-                svg.addEventListener('mouseleave', () => gsap.to(svg, { rotate: 0, scale: 1, duration: .5, ease: 'elastic.out(1,.5)' }));
-            }
-        });
+/* =====================================================================
+   6. LIGHTBOX — legge ALL_MEDIA (Archivio + Workshop unificati)
+   Il click è agganciato per griglia mantenendo l'id assegnato in fase 0,
+   così l'ordine del DOM non deve più coincidere con l'ordine dell'array.
+   ===================================================================== */
+const lb = document.getElementById('lightbox');
+const [lbImg, lbGhostC, lbGhostM, lbCaption, lbCount] = ['lb-img','lb-ghost-c','lb-ghost-m','lb-caption','lb-count'].map(id => document.getElementById(id));
+let lbIndex = 0, lbOpen = false;
 
-        // 6. Reveal Gallerie & Hover Punk CMYK
-        gsap.utils.toArray('.reveal-wrap').forEach(wrap => {
-            const media = wrap.querySelector('.media-asset');
-            gsap.set(wrap, { clipPath: 'inset(100% 0% 0% 0%)' });
-            gsap.set(media, { scale: 1.3 });
+function renderLb(glitch) {
+  const g = ALL_MEDIA[lbIndex];
+  lbImg.src = lbGhostC.src = lbGhostM.src = g.src; lbImg.alt = g.alt;
+  lbCaption.textContent = `${g.n}. ${g.title}`;
+  lbCount.textContent = `${String(lbIndex+1).padStart(2,'0')} / ${String(ALL_MEDIA.length).padStart(2,'0')}`;
+  if (glitch && !REDUCE) gsap.timeline()
+    .set([lbGhostC, lbGhostM], { opacity:.9, x:0 })
+    .to(lbGhostC, { x:-10, duration:.18, ease:'power2.out' }, 0)
+    .to(lbGhostM, { x:10, duration:.18, ease:'power2.out' }, 0)
+    .to([lbGhostC, lbGhostM], { opacity:0, x:0, duration:.22, ease:'power2.in' }, .16);
+}
+function openLb(i) {
+  lbIndex = i; lbOpen = true; renderLb(false);
+  lb.classList.replace('hidden','flex'); document.body.classList.add('fixed-body');
+  gsap.set('#lb-frame', { clipPath:'inset(100% 0% 0% 0%)' });
+  gsap.fromTo(lb, { opacity:0 }, { opacity:1, duration:.4*D, ease:'power2.out' });
+  gsap.to('#lb-frame', { clipPath:'inset(0% 0% 0% 0%)', duration:1*D, ease:'expo.out', delay:.1 });
+}
+function closeLb() {
+  lbOpen = false;
+  gsap.to(lb, { opacity:0, duration:.35*D, ease:'power2.in', onComplete: () => { lb.classList.replace('flex','hidden'); document.body.classList.remove('fixed-body'); } });
+}
+const nextLb = () => { lbIndex = (lbIndex+1) % ALL_MEDIA.length; renderLb(true); };
+const prevLb = () => { lbIndex = (lbIndex-1+ALL_MEDIA.length) % ALL_MEDIA.length; renderLb(true); };
 
-            ScrollTrigger.create({ trigger: wrap, start: 'top 85%', once: true, onEnter: () => {
-                gsap.to(wrap, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.8 * D, ease: 'expo.out' });
-                gsap.to(media, { scale: 1, duration: 2.2 * D, ease: 'expo.out', delay: .1 * D });
-            }});
-
-            if (HOVER && !REDUCE && media.tagName === 'IMG') {
-                const gC = media.cloneNode(); gC.className = 'media-asset ghost ghost-cyan';
-                const gM = media.cloneNode(); gM.className = 'media-asset ghost ghost-magenta';
-                media.after(gM, gC);
-                const glitch = gsap.timeline({ paused: true })
-                    .to([gC, gM], { opacity: .85, duration: .35, ease: 'power3.out' }, 0)
-                    .to(gC, { x: -6, y: 5, duration: .35, ease: 'power3.out' }, 0)
-                    .to(gM, { x: 6, y: -5, duration: .35, ease: 'power3.out' }, 0);
-                wrap.addEventListener('mouseenter', () => glitch.play());
-                wrap.addEventListener('mouseleave', () => glitch.reverse());
-            }
-        });
-
-        // 7. Lightbox Controller
-        const lb = document.getElementById('lightbox');
-        const [lbImg, lbGhostC, lbGhostM, lbCaption, lbCount] = ['lb-img', 'lb-ghost-c', 'lb-ghost-m', 'lb-caption', 'lb-count'].map(id => document.getElementById(id));
-        let lbIndex = 0, lbOpen = false;
-
-        function renderLb(glitch) {
-            const g = ALL_MEDIA[lbIndex];
-            lbImg.src = lbGhostC.src = lbGhostM.src = g.src; 
-            lbImg.alt = g.alt;
-            lbCaption.textContent = `${g.n}. ${g.title}`;
-            lbCount.textContent = `${String(lbIndex + 1).padStart(2, '0')} / ${String(ALL_MEDIA.length).padStart(2, '0')}`;
-            
-            if (glitch && !REDUCE) gsap.timeline()
-                .set([lbGhostC, lbGhostM], { opacity: .9, x: 0 })
-                .to(lbGhostC, { x: -10, duration: .18, ease: 'power2.out' }, 0)
-                .to(lbGhostM, { x: 10, duration: .18, ease: 'power2.out' }, 0)
-                .to([lbGhostC, lbGhostM], { opacity: 0, x: 0, duration: .22, ease: 'power2.in' }, .16);
-        }
-
-        function openLb(i) {
-            lbIndex = i; lbOpen = true; renderLb(false);
-            lb.classList.replace('hidden', 'flex'); 
-            document.body.classList.add('fixed-body');
-            gsap.set('#lb-frame', { clipPath: 'inset(100% 0% 0% 0%)' });
-            gsap.fromTo(lb, { opacity: 0 }, { opacity: 1, duration: .4 * D, ease: 'power2.out' });
-            gsap.to('#lb-frame', { clipPath: 'inset(0% 0% 0% 0%)', duration: 1 * D, ease: 'expo.out', delay: .1 });
-        }
-
-        function closeLb() {
-            lbOpen = false;
-            gsap.to(lb, { opacity: 0, duration: .35 * D, ease: 'power2.in', onComplete: () => { 
-                lb.classList.replace('flex', 'hidden'); 
-                document.body.classList.remove('fixed-body'); 
-            }});
-        }
-
-        const nextLb = () => { lbIndex = (lbIndex + 1) % ALL_MEDIA.length; renderLb(true); };
-        const prevLb = () => { lbIndex = (lbIndex - 1 + ALL_MEDIA.length) % ALL_MEDIA.length; renderLb(true); };
-
-        document.querySelectorAll('#archivio-grid .gallery-item').forEach((el, i) => el.addEventListener('click', () => openLb(GALLERY[i].id)));
-        document.querySelectorAll('#workshop-grid .gallery-item').forEach((el, i) => el.addEventListener('click', () => openLb(WORKSHOP[i].id)));
-        
-        document.getElementById('lb-close').onclick = closeLb;
-        document.getElementById('lb-next').onclick = nextLb;
-        document.getElementById('lb-prev').onclick = prevLb;
-        
-        lb.addEventListener('click', e => { if (e.target === lb) closeLb(); });
-        
-        document.addEventListener('keydown', e => { 
-            if (!lbOpen) return;
-            if (e.key === 'Escape') closeLb(); 
-            if (e.key === 'ArrowRight') nextLb(); 
-            if (e.key === 'ArrowLeft') prevLb();
-        });
-    </script>
+document.querySelectorAll('#archivio-grid .gallery-item').forEach((el,i) => el.addEventListener('click', () => openLb(GALLERY[i].id)));
+document.querySelectorAll('#workshop-grid .gallery-item').forEach((el,i) => el.addEventListener('click', () => openLb(WORKSHOP[i].id)));
+document.getElementById('lb-close').onclick = closeLb;
+document.getElementById('lb-next').onclick = nextLb;
+document.getElementById('lb-prev').onclick = prevLb;
+lb.addEventListener('click', e => e.target === lb && closeLb());
+document.addEventListener('keydown', e => { if (!lbOpen) return;
+  if (e.key === 'Escape') closeLb(); if (e.key === 'ArrowRight') nextLb(); if (e.key === 'ArrowLeft') prevLb();
+});
+</script>
 </body>
 </html>
